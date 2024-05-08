@@ -38,6 +38,12 @@ func (dbc *DBConnection) GetInstanceDB() (*DBConnection, error) {
 			dbc.Db = dbc.Client.Database(dbName)
 		}
 	})
+
+	if dbc.Db == nil {
+		log.Printf("Client is nil, reinitializing")
+		once = sync.Once{} // Reiniciar la inicialización
+		return dbc.GetInstanceDB() // Llamar de nuevo a GetClient para inicializar
+	}
 	return dbc, dbError
 }
 
