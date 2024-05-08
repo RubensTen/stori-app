@@ -1,0 +1,5 @@
+Email, Name, Id, Date, Transaction
+validEmail@gmail.com, Ruben, 1, 7/15,+60.5
+validEmail@gmail.com, Ruben, 2, 7/10,-10.3
+validEmail@gmail.com, Ruben, 2, 8/10,-20.46
+validEmail@gmail.com, Ruben, 2, 8/10,+10
