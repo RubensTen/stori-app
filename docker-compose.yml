@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017" # Exponemos el puerto 27017 para acceso externo
+    volumes:
+      - mongodata:/data/db # Persistencia de datos
+
+  stori-app:
+    build:
+      context: .
+      dockerfile: Dockerfile # Usamos el Dockerfile para construir la aplicación Go
+    platform: linux/amd64
+    image: stori-app-function:stori-app # Nombre de la imagen y etiqueta    
+    depends_on:
+      - mongodb # Aseguramos que MongoDB esté corriendo antes de la aplicación Go
+    env_file:
+      - path: ./function/.env
+        required: true
+    ports:
+      - "9000:8080" # Puerto de la aplicación Go
+    volumes:
+      - .:/app # Montar el código fuente en el contenedor
+      - ~/.aws:/root/.aws # Volumen para acceso a credenciales de AWS
+    entrypoint:
+      - /usr/local/bin/aws-lambda-rie
+    command: 
+      - ./bootstrap
+
+volumes:
+  mongodata: {} # Volumen para persistir datos de MongoDB
