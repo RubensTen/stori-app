@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"stori-app/helpers"
 	"stori-app/models"
@@ -159,29 +160,35 @@ func SendEmailsAndStore(transactions []helpers.Transactions, repository *reposit
 	if os.Getenv("SENDER_EMAIL") == "" {
 		return errors.New("SENDER_EMAIL not found, it's required")
 	}
+	var wg sync.WaitGroup
 	accountsInfo := mapTransactionsToAccount(transactions)
 	for _, request := range accountsInfo {
-		log.Printf("Email in progress to: %s", request.Email)
-		bodyEmail := helpers.GenerateSummaryTemplate(helpers.SummaryTemplate{
-			ClientName:          request.ClientName,
-			TotalBalance:        request.TotalBalance,
-			MonthlyTransactions: request.MonthlyTransactions,
-			AverageDebitAmount:  calculateAverage(request.DebitAmounts),
-			AverageCreditAmount: calculateAverage(request.CreditAmounts),
-		})
-		err := helpers.SendEmail(helpers.EmailRequest{
-			Sender:  os.Getenv("SENDER_EMAIL"),
-			To:      request.Email,
-			Subject: "Stori - Account Balance and Transactions Report",
-			Body:    bodyEmail,
-		})
-		if err != nil {
-			log.Printf("error to send email: %s", err.Error())
-		}
-		err = saveData(repository, request)
-		if err != nil {
-			log.Printf("error to saveData: %s", err.Error())
-		}
+		wg.Add(1)
+		go func(request AccountInfo) {
+			defer wg.Done()
+			log.Printf("Email in progress to: %s", request.Email)
+			bodyEmail := helpers.GenerateSummaryTemplate(helpers.SummaryTemplate{
+				ClientName:          request.ClientName,
+				TotalBalance:        request.TotalBalance,
+				MonthlyTransactions: request.MonthlyTransactions,
+				AverageDebitAmount:  calculateAverage(request.DebitAmounts),
+				AverageCreditAmount: calculateAverage(request.CreditAmounts),
+			})
+			err := helpers.SendEmail(helpers.EmailRequest{
+				Sender:  os.Getenv("SENDER_EMAIL"),
+				To:      request.Email,
+				Subject: "Stori - Account Balance and Transactions Report",
+				Body:    bodyEmail,
+			})
+			if err != nil {
+				log.Printf("error to send email: %s", err.Error())
+			}
+			err = saveData(repository, request)
+			if err != nil {
+				log.Printf("error to saveData: %s", err.Error())
+			}
+		}(request)
 	}
+	wg.Wait()
 	return nil
 }
